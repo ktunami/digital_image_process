@@ -11,10 +11,14 @@ if __name__ == '__main__':
                 'rectangle.png',               # 2
                 'gradient.png',                # 3
                 'grandma.jpg',                 # 4
+                'affine.png',                  # 5
+                'fourier.png',                 # 6
+                'girl.png',                    # 7
                 ''
                 ]
-    img = img_io.read_img(img_list[4])
-    basic_process.smooth(img)
+    img = img_io.read_img(img_list[7])
+    # img_io.show_img('origin', img)
+    chp3.img_hist_op(img)
 
 # basic_process.threshold(img)
 # basic_process.rotate(img)
