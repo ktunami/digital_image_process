@@ -106,22 +106,5 @@ def threshold(img):
         img_io.show_img(string, new_img)
 
 
-def smooth(img):
-    """
-    图像平滑
-    :param img: 输入图像
-    """
-    kernel = np.ones((5, 5), np.float32) / 25
-    img2 = cv2.filter2D(img, -1, kernel)
-    img3 = cv2.blur(img, (5, 5))              # 和上面那个效果一样的
-    img4 = cv2.GaussianBlur(img, (5, 5), 0)
-    img5 = cv2.medianBlur(img, 5)             # 这个适合过滤椒盐噪声
-    img6 = cv2.bilateralFilter(img, 9, 75, 75)  # 后面两个参数是空间高斯函数标准差和灰度值相似性高斯函数标准差
-    img_io.show_img('origin', img)
-    img_io.show_img('smooth', img2)
-    img_io.show_img('blur', img3)
-    img_io.show_img('GaussianBlur', img4)
-    img_io.show_img('medianBlur', img5)
-    img_io.show_img('bilateralFilter', img6)
 
 

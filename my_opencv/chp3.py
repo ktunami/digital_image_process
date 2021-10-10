@@ -12,9 +12,17 @@
     分段函数变换
     比特平面分层
 3. 画直方图，直方图均衡
+4. 各种滤波: 均值滤波，中值滤波，高斯滤波
+5. 图像增强-laplacian operators-分别用90度和45度各向同性的核
+6. 非锐化掩蔽和高提升滤波
+7. 边缘检测：
+     Roberts cross-gradient operators.
+     Sobel operators
+     Prewitt operators
+     Canny operators
 """
-import math
 
+import math
 import numpy as np
 from my_opencv.img_io import *
 import matplotlib.pyplot as plt
@@ -120,6 +128,62 @@ def normalize_hist(img):
     return new_img
 
 
+def max_min_filtering(img, ksize, is_min):
+    """
+    最大最小值滤波器
+    :param img: 图像
+    :param ksize: 核尺寸
+    :param is_min: 是否是最小滤波器
+    """
+    n = (ksize // 2)
+    rows, cols, channels = img.shape
+    new_img = np.zeros(img.shape, dtype=np.uint8)  # 注意：必须要记得指明类型！
+    for i in range(channels):
+        if is_min:
+            extended = np.full((rows + n * 2, cols + n * 2), 255, dtype=np.uint8)
+            extended[n:rows + n, n:cols + n] = img[:, :, i]
+            for y in range(rows):
+                for x in range(cols):
+                    new_img[y, x, i] = np.min(extended[y:y + ksize, x:x + ksize])
+        else:
+            extended = np.zeros((rows + n * 2, cols + n * 2), dtype=np.uint8)
+            extended[n:rows + n, n:cols + n] = img[:, :, i]
+            for y in range(rows):
+                for x in range(cols):
+                    new_img[y, x, i] = np.max(extended[y:y + ksize, x:x + ksize])
+    return new_img
+
+
+def get_abs_filter2d(img, kernel):
+    """
+    做图像相关，负值转为正值
+    """
+    s_img = cv2.filter2D(img, cv2.CV_16S, kernel)
+    u_img = cv2.convertScaleAbs(s_img)
+    return u_img
+
+
+def edge_detect_algo(img, kernel_x, kernel_y, title):
+    """
+    边缘检测通用模版
+    :param img: 待处理图像
+    :param kernel_x: x核
+    :param kernel_y: y核
+    :param title: 展示标题
+    """
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    edge_x = get_abs_filter2d(gray, kernel_x)
+    edge_y = get_abs_filter2d(gray, kernel_y)
+    add_direct = cv2.add(edge_x, edge_y)
+    add_weighted = cv2.addWeighted(edge_x, 0.5, edge_y, 0.5, 0)  # 用这个
+    show_img('gray', gray)
+    show_img(title + ' x', edge_x)
+    show_img(title + ' y', edge_y)
+    show_img(title + ' add direct', add_direct)
+    show_img(title + ' add weighted', add_weighted)
+
+
+# ----------------------------------------------------------------------------- #
 # 1. 不同的仿射变换矩阵得到不同的图像几何变换结果
 def effect_of_affine_mat(img):
     """
@@ -242,3 +306,103 @@ def img_hist_op(img):
     img_hist(new_img, "normalize_hist")
     show_img('original pic', img)
     show_img('normalize_hist', new_img)
+
+
+# 4. 各种滤波: 均值滤波，中值滤波，高斯滤波
+def smooth(img):
+    """
+    图像平滑  'rectangle.png'   # 2
+    """
+    kernel = np.ones((5, 5), np.float32) / 25
+    img2 = cv2.filter2D(img, -1, kernel)
+    img3 = cv2.blur(img, (5, 5))  # 和上面那个效果一样的
+    img4 = cv2.GaussianBlur(img, (5, 5), 0)
+    img5 = cv2.medianBlur(img, 5)  # 这个适合过滤椒盐噪声
+    img6 = cv2.bilateralFilter(img, 9, 75, 75)  # 后面两个参数是空间高斯函数标准差和灰度值相似性高斯函数标准差
+    img7 = max_min_filtering(img, 3, True)
+    img8 = max_min_filtering(img, 3, False)
+    show_img('origin', img)
+    show_img('smooth', img2)
+    show_img('blur', img3)
+    show_img('GaussianBlur', img4)
+    show_img('medianBlur', img5)
+    show_img('bilateralFilter', img6)
+    show_img('min filter', img7)
+    show_img('max filter', img8)
+
+
+# 5. 图像增强-laplacian-分别用90度和45度各向同性的核
+# 'mri.png',  # 10
+# 'lines.png',  # 11
+# 'pie.png',  # 1
+def laplacian_enhancement(img):
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    show_img('gray', gray)
+    kernel90 = np.array([[0, 1, 0],
+                         [1, -4, 1],
+                         [0, 1, 0]])
+    kernel45 = np.array([[1, 1, 1],
+                         [1, -8, 1],
+                         [1, 1, 1]])
+    la_img_90 = cv2.filter2D(gray, -1, kernel90)
+    sharp_90 = cv2.subtract(gray, la_img_90)
+    la_img_45 = cv2.filter2D(gray, -1, kernel45)
+    sharp_45 = cv2.subtract(gray, la_img_45)
+    show_img('laplacian 90', la_img_90)
+    show_img('sharp 90', sharp_90)
+    show_img('laplacian 45', la_img_45)
+    show_img('sharp 45', sharp_45)
+
+
+# 6. 非锐化掩蔽和高提升滤波
+def unsharp_mask_highboost(img):
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    blur = cv2.GaussianBlur(gray, (21, 21), 5)
+    mask = cv2.subtract(gray, blur)
+    unsharp_mask = cv2.add(gray, mask)
+    factor = 8 * np.full((mask.shape[0], mask.shape[1]), 1, dtype=np.uint8)
+    factor = cv2.multiply(mask, factor)
+    highboost_filter = cv2.add(gray, factor)
+    show_img('gray', gray)
+    show_img('blur 21*21 5 gaussian', blur)
+    show_img('mask', mask)
+    show_img('unsharp_mask', unsharp_mask)
+    show_img('highboost_filter 8', highboost_filter)
+
+
+# 7. 边缘检测：
+# 'pie.png',    # 1
+# 'girl.png',   # 7
+def edge_detection_robert(img):
+    #      Roberts cross-gradient operators.
+    robert_kernel_x = np.array([[0, 0, 0],
+                                [0, -1, 0],
+                                [0, 0, 1]])
+    robert_kernel_y = np.array([[0, 0, 0],
+                                [0, 0, -1],
+                                [0, 1, 0]])
+    # edge_detect_algo(img, robert_kernel_x, robert_kernel_y, 'Roberts')
+    #      Sobel operators
+    sobel_kernel_x = np.array([[-1, -2, -1],
+                               [0, 0, 0],
+                               [1, 2, 1]])
+    sobel_kernel_y = np.array([[-1, 0, 1],
+                               [-2, 0, 2],
+                               [-1, 0, 1]])
+    # edge_detect_algo(img, sobel_kernel_x, sobel_kernel_y, 'Sobel')
+    #      Prewitt operators
+    sobel_kernel_x = np.array([[-1, -1, -1],
+                               [0, 0, 0],
+                               [1, 1, 1]])
+    sobel_kernel_y = np.array([[-1, 0, 1],
+                               [-1, 0, 1],
+                               [-1, 0, 1]])
+    # edge_detect_algo(img, sobel_kernel_x, sobel_kernel_y, 'Prewitt')
+    #      Canny operators
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    canny = cv2.Canny(gray, 20, 100)
+    show_img('gray', gray)
+    show_img('canny 20, 100', canny)
+
+
+

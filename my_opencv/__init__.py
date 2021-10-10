@@ -35,4 +35,4 @@ class Path(object):
 
 
 Path.init_path()
-__all__ = ['basic_process', 'img_io', 'chp3']
+__all__ = ['basic_process', 'img_io', 'chp3', 'chp4']

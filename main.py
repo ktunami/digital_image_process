@@ -14,11 +14,17 @@ if __name__ == '__main__':
                 'affine.png',                  # 5
                 'fourier.png',                 # 6
                 'girl.png',                    # 7
+                'salt.png',                    # 8
+                'test.png',                    # 9
+                'mri.png',                     # 10
+                'lines.png',                   # 11
+                'lines2.png',                  # 12
+                'dip.png',                     # 13
                 ''
                 ]
     img = img_io.read_img(img_list[7])
     # img_io.show_img('origin', img)
-    chp3.img_hist_op(img)
+    chp4.filters_test()
 
 # basic_process.threshold(img)
 # basic_process.rotate(img)
